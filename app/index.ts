@@ -1,6 +1,8 @@
 import { Hono } from "hono"
 import { auth } from "../lib/auth";
 import { cors } from "hono/cors";
+import { tasks } from "./tasks";
+
 export const app = new Hono<{
     Variables: {
         user: typeof auth.$Infer.Session.user | null;
@@ -38,6 +40,22 @@ app.use(
         credentials: true,
     }),
 );
+
+// Add CORS for tasks endpoints
+app.use(
+    "/api/tasks/*",
+    cors({
+        origin: "*",
+        allowHeaders: ["Content-Type", "Authorization"],
+        allowMethods: ["POST", "GET", "PUT", "DELETE", "OPTIONS"],
+        exposeHeaders: ["Content-Length"],
+        maxAge: 600,
+        credentials: true,
+    }),
+);
+
+// Mount tasks router
+app.route("/tasks", tasks);
 
 app.get('/', (c) => {
     return c.json({ message: 'Hello Hono!' })

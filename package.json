@@ -5,7 +5,8 @@
     "dev": "bun run --watch ./app/index.ts",
     "start": "vercel dev",
     "deploy": "vercel",
-    "db:generate": "prisma generate --schema ./prisma/"
+    "db:generate": "prisma generate --schema ./prisma/",
+    "db:push": "prisma db push --schema ./prisma/"
   },
   "dependencies": {
     "@prisma/client": "^6.12.0",

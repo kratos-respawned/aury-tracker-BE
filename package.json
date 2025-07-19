@@ -1,0 +1,15 @@
+{
+  "name": "auri-tracker-backend",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch ./app/index.ts",
+    "start": "vercel dev",
+    "deploy": "vercel"
+  },
+  "dependencies": {
+    "hono": "^4.8.5"
+  },
+  "devDependencies": {
+    "vercel": "^32.4.1"
+  }
+}

@@ -1,6 +1,6 @@
 
-import { handle } from 'hono/vercel'
-import { app } from '../app'
+// import { handle } from 'hono/vercel'
+// import { app } from '../app/index.js'
 
 
-export default handle(app)
+// export default handle(app)

@@ -3,10 +3,10 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --watch ./app/index.ts",
-    "start": "vercel dev",
-    "deploy": "vercel",
+"start":"bun run db:generate && bun run ./app/index.ts",
     "db:generate": "prisma generate --schema ./prisma/",
-    "db:push": "prisma db push --schema ./prisma/"
+    "db:push": "prisma db push --schema ./prisma/",
+    "check": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.2",

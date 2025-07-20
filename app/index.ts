@@ -1,8 +1,8 @@
 import { Hono } from "hono"
-import { auth } from "../lib/auth";
+import { auth } from "../lib/auth.js";
 import { cors } from "hono/cors";
-import { tasks } from "./tasks";
-import { scheduledTasks } from "./scheduled-tasks";
+import { tasks } from "./tasks.js";
+import { scheduledTasks } from "./scheduled-tasks.js";
 
 export const app = new Hono<{
     Variables: {

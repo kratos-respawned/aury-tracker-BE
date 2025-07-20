@@ -29,11 +29,13 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
     return auth.handler(c.req.raw);
 });
 
+const allowedOrigins = ["localhost:3000", "http://localhost:3000"]
+
 
 app.use(
     "/api/auth/*", // or replace with "*" to enable cors for all routes
     cors({
-        origin: "*", // replace with your origin
+        origin: allowedOrigins, // replace with your origin
         allowHeaders: ["Content-Type", "Authorization"],
         allowMethods: ["POST", "GET", "OPTIONS"],
         exposeHeaders: ["Content-Length"],
@@ -46,7 +48,7 @@ app.use(
 app.use(
     "/api/tasks/*",
     cors({
-        origin: "*",
+        origin: allowedOrigins,
         allowHeaders: ["Content-Type", "Authorization"],
         allowMethods: ["POST", "GET", "PUT", "DELETE", "OPTIONS"],
         exposeHeaders: ["Content-Length"],
@@ -59,7 +61,7 @@ app.use(
 app.use(
     "/api/scheduled-tasks/*",
     cors({
-        origin: "*",
+        origin: allowedOrigins,
         allowHeaders: ["Content-Type", "Authorization"],
         allowMethods: ["POST", "GET", "PUT", "DELETE", "OPTIONS"],
         exposeHeaders: ["Content-Length"],

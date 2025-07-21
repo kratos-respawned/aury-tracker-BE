@@ -3,6 +3,7 @@ import { auth } from "../lib/auth.js";
 import { cors } from "hono/cors";
 import { tasks } from "./tasks.js";
 import { scheduledTasks } from "./scheduled-tasks.js";
+import { apiKey } from "better-auth/plugins";
 
 export const app = new Hono<{
     Variables: {
@@ -29,41 +30,21 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
     return auth.handler(c.req.raw);
 });
 
-const allowedOrigins = ["localhost:3000", "http://localhost:3000"]
-
+app.use("*", cors({
+    origin: ["http://localhost:8080"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["POST", "GET", "OPTIONS", "PUT", "DELETE"],
+    exposeHeaders: ["Content-Length"],
+    maxAge: 600,
+    credentials: true,
+}));
 
 app.use(
     "/api/auth/*", // or replace with "*" to enable cors for all routes
     cors({
-        origin: allowedOrigins, // replace with your origin
+        origin: ["http://localhost:3001"], 
         allowHeaders: ["Content-Type", "Authorization"],
         allowMethods: ["POST", "GET", "OPTIONS"],
-        exposeHeaders: ["Content-Length"],
-        maxAge: 600,
-        credentials: true,
-    }),
-);
-
-// Add CORS for tasks endpoints
-app.use(
-    "/api/tasks/*",
-    cors({
-        origin: allowedOrigins,
-        allowHeaders: ["Content-Type", "Authorization"],
-        allowMethods: ["POST", "GET", "PUT", "DELETE", "OPTIONS"],
-        exposeHeaders: ["Content-Length"],
-        maxAge: 600,
-        credentials: true,
-    }),
-);
-
-// Add CORS for scheduled tasks endpoints
-app.use(
-    "/api/scheduled-tasks/*",
-    cors({
-        origin: allowedOrigins,
-        allowHeaders: ["Content-Type", "Authorization"],
-        allowMethods: ["POST", "GET", "PUT", "DELETE", "OPTIONS"],
         exposeHeaders: ["Content-Length"],
         maxAge: 600,
         credentials: true,

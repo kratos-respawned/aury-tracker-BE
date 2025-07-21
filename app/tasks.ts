@@ -49,9 +49,9 @@ tasks.get("/:id", async (c) => {
 // POST /tasks - Create a new task
 tasks.post("/", zValidator("json", createTaskSchema), async (c) => {
   try {
-    const { name } = c.req.valid("json");
+    const { name, description } = c.req.valid("json");
     const task = await db.task.create({
-      data: { name },
+      data: { name, description },
     });
     return c.json({ task }, 201);
   } catch (error) {
@@ -63,11 +63,11 @@ tasks.post("/", zValidator("json", createTaskSchema), async (c) => {
 tasks.put("/:id", zValidator("json", updateTaskSchema), async (c) => {
   try {
     const id = c.req.param("id");
-    const { name } = c.req.valid("json");
+    const { name, description } = c.req.valid("json");
 
     const task = await db.task.update({
       where: { id },
-      data: { name },
+      data: { name, description },
     });
 
     return c.json({ task });

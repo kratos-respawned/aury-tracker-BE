@@ -30,7 +30,7 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
 });
 
 app.use("*", cors({
-    origin: ["http://localhost:8080"],
+    origin: ["http://localhost:8080", "https://aury.butterjam.dev"],
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["POST", "GET", "OPTIONS", "PUT", "DELETE"],
     exposeHeaders: ["Content-Length"],

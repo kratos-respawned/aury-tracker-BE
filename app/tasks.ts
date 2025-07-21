@@ -8,10 +8,12 @@ const tasks = new Hono();
 // Validation schemas
 const createTaskSchema = z.object({
   name: z.string().min(1, "Task name is required"),
+  description: z.string().optional(),
 });
 
 const updateTaskSchema = z.object({
   name: z.string().min(1, "Task name is required"),
+  description: z.string().optional(),
 });
 
 // GET /tasks - Get all tasks

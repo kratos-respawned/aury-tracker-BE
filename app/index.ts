@@ -3,7 +3,6 @@ import { auth } from "../lib/auth.js";
 import { cors } from "hono/cors";
 import { tasks } from "./tasks.js";
 import { scheduledTasks } from "./scheduled-tasks.js";
-import { apiKey } from "better-auth/plugins";
 
 export const app = new Hono<{
     Variables: {

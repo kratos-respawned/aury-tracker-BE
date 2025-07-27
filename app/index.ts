@@ -3,6 +3,7 @@ import { auth } from "../lib/auth.js";
 import { cors } from "hono/cors";
 import { predefinedTasks } from "./predefined-tasks.js";
 import { tasks } from "./tasks.js";
+import { cats } from "./cats.js";
 
 export const app = new Hono<{
   Variables: {
@@ -58,6 +59,9 @@ app.route("/predefined-tasks", predefinedTasks);
 
 // Mount tasks router
 app.route("/tasks", tasks);
+
+// Mount cats router
+app.route("/cats", cats);
 
 app.get("/", (c) => {
   return c.json({ message: "Hello Hono!" });

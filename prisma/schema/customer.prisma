@@ -1,11 +1,12 @@
-model Cat {
+model Customer {
     id        String    @id @default(cuid())
     name      String
     gender    String
+    type      String    @default("cat")
     birthday  DateTime?
     breed     String?
     createdAt DateTime  @default(now())
     updatedAt DateTime  @updatedAt
 
-    @@map("cat")
+    @@map("customer")
 }

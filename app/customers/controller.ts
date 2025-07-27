@@ -1,23 +1,24 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { db } from "../lib/prisma.js";
+import { db } from "../../lib/prisma.js";
+import { CustomerGenderEnum, CustomerTypeEnum } from "./enums.js";
 
 const customers = new Hono();
 
 // Validation schemas
 const createCustomerSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  gender: z.string().min(1, "Gender is required"),
-  type: z.string().optional(),
+  gender: z.enum(CustomerGenderEnum),
+  type: z.enum(CustomerTypeEnum).optional(),
   birthday: z.string().optional(),
   breed: z.string().optional(),
 });
 
 const updateCustomerSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
-  gender: z.string().min(1, "Gender is required").optional(),
-  type: z.string().optional(),
+  gender: z.enum(CustomerGenderEnum).optional(),
+  type: z.enum(CustomerTypeEnum).optional(),
   birthday: z.string().optional(),
   breed: z.string().optional(),
 });
@@ -75,7 +76,7 @@ customers.post("/", zValidator("json", createCustomerSchema), async (c) => {
       data: {
         name,
         gender,
-        type: type || "cat",
+        type: type || CustomerTypeEnum.CAT,
         birthday: birthday ? new Date(birthday) : null,
         breed,
       },

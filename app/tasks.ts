@@ -7,20 +7,44 @@ const tasks = new Hono();
 
 // Validation schemas
 const createTaskSchema = z.object({
-  name: z.string().min(1, "Task name is required"),
-  description: z.string().optional(),
+  taskId: z.string().min(1, "Task ID is required"),
+  scheduledOn: z.string(),
+  duration: z.number().int().positive("Duration must be a positive integer"),
+  status: z
+    .enum(["pending", "in_progress", "completed", "cancelled"])
+    .optional(),
+  assignedTo: z.string().min(1, "Assigned user ID is required").optional(),
 });
 
 const updateTaskSchema = z.object({
-  name: z.string().min(1, "Task name is required"),
-  description: z.string().optional(),
+  taskId: z.string().min(1, "Task ID is required").optional(),
+  scheduledOn: z.string().optional(),
+  duration: z
+    .number()
+    .int()
+    .positive("Duration must be a positive integer")
+    .optional(),
+  status: z
+    .enum(["pending", "in_progress", "completed", "cancelled"])
+    .optional(),
+  assignedTo: z.string().min(1, "Assigned user ID is required").optional(),
 });
 
 // GET /tasks - Get all tasks
 tasks.get("/", async (c) => {
   try {
     const tasks = await db.task.findMany({
-      orderBy: { createdAt: "desc" },
+      include: {
+        predefinedTask: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { scheduledOn: "asc" },
     });
     return c.json({ tasks });
   } catch (error) {
@@ -34,6 +58,16 @@ tasks.get("/:id", async (c) => {
     const id = c.req.param("id");
     const task = await db.task.findUnique({
       where: { id },
+      include: {
+        predefinedTask: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
     if (!task) {
@@ -49,10 +83,39 @@ tasks.get("/:id", async (c) => {
 // POST /tasks - Create a new task
 tasks.post("/", zValidator("json", createTaskSchema), async (c) => {
   try {
-    const { name, description } = c.req.valid("json");
-    const task = await db.task.create({
-      data: { name, description },
+    const { taskId, scheduledOn, duration, status, assignedTo } =
+      c.req.valid("json");
+
+    // Verify that the predefined task exists
+    const predefinedTask = await db.predefinedTask.findUnique({
+      where: { id: taskId },
     });
+
+    if (!predefinedTask) {
+      return c.json({ error: "Predefined task not found" }, 404);
+    }
+
+    // Verify that the user exists if assignedTo is provided
+    if (assignedTo) {
+      const user = await db.user.findUnique({
+        where: { id: assignedTo },
+      });
+
+      if (!user) {
+        return c.json({ error: "User not found" }, 404);
+      }
+    }
+
+    const task = await db.task.create({
+      data: {
+        taskId,
+        scheduledOn: new Date(scheduledOn),
+        duration,
+        status: status || "pending",
+        assignedTo,
+      },
+    });
+
     return c.json({ task }, 201);
   } catch (error) {
     return c.json({ error: "Failed to create task" }, 500);
@@ -63,11 +126,53 @@ tasks.post("/", zValidator("json", createTaskSchema), async (c) => {
 tasks.put("/:id", zValidator("json", updateTaskSchema), async (c) => {
   try {
     const id = c.req.param("id");
-    const { name, description } = c.req.valid("json");
+    const updateData = c.req.valid("json");
+
+    // Prepare the update data
+    const data: any = {};
+    if (updateData.taskId) data.taskId = updateData.taskId;
+    if (updateData.scheduledOn)
+      data.scheduledOn = new Date(updateData.scheduledOn);
+    if (updateData.duration) data.duration = updateData.duration;
+    if (updateData.status) data.status = updateData.status;
+    if (updateData.assignedTo !== undefined)
+      data.assignedTo = updateData.assignedTo;
+
+    // Verify predefined task exists if taskId is being updated
+    if (updateData.taskId) {
+      const predefinedTask = await db.predefinedTask.findUnique({
+        where: { id: updateData.taskId },
+      });
+
+      if (!predefinedTask) {
+        return c.json({ error: "Predefined task not found" }, 404);
+      }
+    }
+
+    // Verify user exists if assignedTo is being updated and is not null
+    if (updateData.assignedTo !== undefined && updateData.assignedTo) {
+      const user = await db.user.findUnique({
+        where: { id: updateData.assignedTo },
+      });
+
+      if (!user) {
+        return c.json({ error: "User not found" }, 404);
+      }
+    }
 
     const task = await db.task.update({
       where: { id },
-      data: { name, description },
+      data,
+      include: {
+        predefinedTask: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
     return c.json({ task });
@@ -95,4 +200,4 @@ tasks.delete("/:id", async (c) => {
   }
 });
 
-export { tasks }; 
+export { tasks };

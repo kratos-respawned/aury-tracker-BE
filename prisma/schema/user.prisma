@@ -8,9 +8,9 @@ model User {
     updatedAt     DateTime
     sessions      Session[]
     accounts      Account[]
-    
+
     // Relations
-    scheduledTasks ScheduledTask[]
+    tasks Task[]
 
     @@unique([email])
     @@map("user")

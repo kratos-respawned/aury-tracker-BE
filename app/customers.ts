@@ -34,6 +34,20 @@ customers.get("/", async (c) => {
   }
 });
 
+// GET /customers/types - Get all customer types
+customers.get("/:type", async (c) => {
+  try {
+    const type = c.req.param("type");
+    const customers = await db.customer.findMany({
+      where: { type },
+    });
+
+    return c.json({ customers });
+  } catch (error) {
+    return c.json({ error: "Failed to fetch customer of type" }, 500);
+  }
+});
+
 // GET /customers/:id - Get a specific customer
 customers.get("/:id", async (c) => {
   try {

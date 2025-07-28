@@ -10,7 +10,7 @@ const customers = new Hono();
 const createCustomerSchema = z.object({
   name: z.string().min(1, "Name is required"),
   gender: z.enum(CustomerGenderEnum),
-  type: z.enum(CustomerTypeEnum).optional(),
+  type: z.enum(CustomerTypeEnum),
   birthday: z.string().optional(),
   breed: z.string().optional(),
 });

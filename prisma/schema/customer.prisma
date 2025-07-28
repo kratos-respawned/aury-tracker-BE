@@ -2,7 +2,7 @@ model Customer {
     id        String    @id @default(cuid())
     name      String
     gender    String
-    type      String    @default("cat")
+    type      String
     birthday  DateTime?
     breed     String?
     createdAt DateTime  @default(now())

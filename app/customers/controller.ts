@@ -36,7 +36,7 @@ customers.get("/", async (c) => {
 });
 
 // GET /customers/types - Get all customer types
-customers.get("/:type", async (c) => {
+customers.get("/type/:type", async (c) => {
   try {
     const type = c.req.param("type");
     const customers = await db.customer.findMany({

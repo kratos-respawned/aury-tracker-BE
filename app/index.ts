@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { predefinedTasks } from "./predefined-tasks.js";
 import { tasks } from "./tasks.js";
 import { customers } from "./customers/controller.js";
+import { dashboard } from "./dashboard/controller.js";
 
 export const app = new Hono<{
   Variables: {
@@ -62,6 +63,9 @@ app.route("/tasks", tasks);
 
 // Mount customers router
 app.route("/customers", customers);
+
+// Mount dashboard router
+app.route("/dashboard", dashboard);
 
 app.get("/", (c) => {
   return c.json({ message: "Hello Hono!" });

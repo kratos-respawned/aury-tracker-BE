@@ -7,7 +7,7 @@ const tasks = new Hono();
 
 // Validation schemas
 const createTaskSchema = z.object({
-  taskId: z.string().min(1, "Task ID is required"),
+  predefinedTaskId: z.string().min(1, "Predefined task ID is required"),
   scheduledOn: z.string(),
   duration: z.number().int().positive("Duration must be a positive integer"),
   status: z
@@ -17,7 +17,10 @@ const createTaskSchema = z.object({
 });
 
 const updateTaskSchema = z.object({
-  taskId: z.string().min(1, "Task ID is required").optional(),
+  predefinedTaskId: z
+    .string()
+    .min(1, "Predefined task ID is required")
+    .optional(),
   scheduledOn: z.string().optional(),
   duration: z
     .number()
@@ -83,12 +86,12 @@ tasks.get("/:id", async (c) => {
 // POST /tasks - Create a new task
 tasks.post("/", zValidator("json", createTaskSchema), async (c) => {
   try {
-    const { taskId, scheduledOn, duration, status, assignedTo } =
+    const { predefinedTaskId, scheduledOn, duration, status, assignedTo } =
       c.req.valid("json");
 
     // Verify that the predefined task exists
     const predefinedTask = await db.predefinedTask.findUnique({
-      where: { id: taskId },
+      where: { id: predefinedTaskId },
     });
 
     if (!predefinedTask) {
@@ -108,7 +111,7 @@ tasks.post("/", zValidator("json", createTaskSchema), async (c) => {
 
     const task = await db.task.create({
       data: {
-        taskId,
+        predefinedTaskId,
         scheduledOn: new Date(scheduledOn),
         duration,
         status: status || "pending",
@@ -130,7 +133,8 @@ tasks.put("/:id", zValidator("json", updateTaskSchema), async (c) => {
 
     // Prepare the update data
     const data: any = {};
-    if (updateData.taskId) data.taskId = updateData.taskId;
+    if (updateData.predefinedTaskId)
+      data.predefinedTaskId = updateData.predefinedTaskId;
     if (updateData.scheduledOn)
       data.scheduledOn = new Date(updateData.scheduledOn);
     if (updateData.duration) data.duration = updateData.duration;
@@ -139,9 +143,9 @@ tasks.put("/:id", zValidator("json", updateTaskSchema), async (c) => {
       data.assignedTo = updateData.assignedTo;
 
     // Verify predefined task exists if taskId is being updated
-    if (updateData.taskId) {
+    if (updateData.predefinedTaskId) {
       const predefinedTask = await db.predefinedTask.findUnique({
-        where: { id: updateData.taskId },
+        where: { id: updateData.predefinedTaskId },
       });
 
       if (!predefinedTask) {

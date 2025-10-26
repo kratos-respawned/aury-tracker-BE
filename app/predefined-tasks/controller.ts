@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { db } from "../lib/prisma.js";
+import { db } from "../../lib/prisma.js";
+import { RecurringEnum } from "./enums.js";
 
 const predefinedTasks = new Hono();
 
@@ -9,11 +10,15 @@ const predefinedTasks = new Hono();
 const createPredefinedTaskSchema = z.object({
   name: z.string().min(1, "Task name is required"),
   description: z.string().optional(),
+  recurring: z.enum(RecurringEnum).optional(),
+  scheduleOn: z.string().optional(),
 });
 
 const updatePredefinedTaskSchema = z.object({
   name: z.string().min(1, "Task name is required"),
   description: z.string().optional(),
+  recurring: z.enum(RecurringEnum).optional(),
+  scheduleOn: z.string().optional(),
 });
 
 // GET /predefined-tasks - Get all predefined tasks
@@ -52,9 +57,14 @@ predefinedTasks.post(
   zValidator("json", createPredefinedTaskSchema),
   async (c) => {
     try {
-      const { name, description } = c.req.valid("json");
+      const { name, description, recurring, scheduleOn } = c.req.valid("json");
       const predefinedTask = await db.predefinedTask.create({
-        data: { name, description },
+        data: { 
+          name, 
+          description,
+          recurring,
+          scheduleOn: scheduleOn ? new Date(scheduleOn) : null,
+        },
       });
       return c.json({ predefinedTask }, 201);
     } catch (error) {
@@ -70,11 +80,16 @@ predefinedTasks.put(
   async (c) => {
     try {
       const id = c.req.param("id");
-      const { name, description } = c.req.valid("json");
+      const { name, description, recurring, scheduleOn } = c.req.valid("json");
 
       const predefinedTask = await db.predefinedTask.update({
         where: { id },
-        data: { name, description },
+        data: { 
+          name, 
+          description,
+          recurring,
+          scheduleOn: scheduleOn ? new Date(scheduleOn) : null,
+        },
       });
 
       return c.json({ predefinedTask });

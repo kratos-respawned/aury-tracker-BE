@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { auth } from "../lib/auth.js";
 import { cors } from "hono/cors";
-import { predefinedTasks } from "./predefined-tasks.js";
+import { predefinedTasks } from "./predefined-tasks/controller.js";
 import { tasks } from "./tasks.js";
 import { customers } from "./customers/controller.js";
 import { dashboard } from "./dashboard/controller.js";

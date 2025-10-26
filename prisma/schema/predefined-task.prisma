@@ -5,6 +5,9 @@ model PredefinedTask {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  recurring   String?
+  scheduleOn  DateTime?
+
   // Relations
   tasks Task[]
 

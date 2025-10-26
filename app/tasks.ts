@@ -55,6 +55,98 @@ tasks.get("/", async (c) => {
   }
 });
 
+// GET /tasks/date/:date - Get tasks for a specific date and generate tasks for predefined tasks if not already there
+// NOTE: Refactor this later to use batching
+tasks.get("/date/:date", async (c) => {
+  try {
+    const dateParam = c.req.param("date");
+    const targetDate = new Date(dateParam);
+    
+    // Validate date format
+    if (isNaN(targetDate.getTime())) {
+      return c.json({ error: "Invalid date format" }, 400);
+    }
+
+    // Set time to start of day for consistent comparison
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Get all predefined tasks that should run daily
+    const predefinedTasks = await db.predefinedTask.findMany({
+      where: {
+        recurring: "DAILY",
+      },
+    });
+
+    // For each predefined task, check if it has tasks for today
+    const newTasks = [];
+    for (const predefinedTask of predefinedTasks) {
+      // Check if this predefined task already has tasks for today
+      const existingTaskForToday = await db.task.findFirst({
+        where: {
+          predefinedTaskId: predefinedTask.id,
+          scheduledOn: {
+            gte: startOfDay,
+            lte: endOfDay,
+          },
+        },
+      });
+
+      // If no task exists for this predefined task today, create one
+      if (!existingTaskForToday) {
+        const task = await db.task.create({
+          data: {
+            predefinedTaskId: predefinedTask.id,
+            scheduledOn: startOfDay,
+            duration: 60, // Default duration of 60 minutes
+            status: "pending",
+          },
+          include: {
+            predefinedTask: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        });
+        newTasks.push(task);
+      }
+    }
+
+    // Get all tasks for today (including newly created ones)
+    const allTasksForToday = await db.task.findMany({
+      where: {
+        scheduledOn: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+      include: {
+        predefinedTask: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return c.json({ tasks: allTasksForToday });
+  } catch (error) {
+    console.error("Error in GET /tasks/date/:date:", error);
+    return c.json({ error: "Failed to fetch tasks for date" }, 500);
+  }
+});
+
 // GET /tasks/:id - Get a specific task
 tasks.get("/:id", async (c) => {
   try {

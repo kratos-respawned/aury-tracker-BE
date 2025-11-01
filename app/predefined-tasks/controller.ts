@@ -2,23 +2,27 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { db } from "../../lib/prisma.js";
-import { RecurringEnum } from "./enums.js";
+import { TIME_REGEX } from "../common/regex.constants.js";
+import { Prisma, ScheduleType } from "@prisma/client";
 
 const predefinedTasks = new Hono();
+
+const recurringSchema = z.object({
+  type: z.enum(ScheduleType),
+  time: z.string().regex(TIME_REGEX, "Time must be in HH:MM format"),
+});
 
 // Validation schemas
 const createPredefinedTaskSchema = z.object({
   name: z.string().min(1, "Task name is required"),
   description: z.string().optional(),
-  recurring: z.enum(RecurringEnum).optional(),
-  scheduleOn: z.string().optional(),
+  recurring: z.array(recurringSchema).optional(),
 });
 
 const updatePredefinedTaskSchema = z.object({
   name: z.string().min(1, "Task name is required"),
   description: z.string().optional(),
-  recurring: z.enum(RecurringEnum).optional(),
-  scheduleOn: z.string().optional(),
+  recurring: z.array(recurringSchema).optional(),
 });
 
 // GET /predefined-tasks - Get all predefined tasks
@@ -26,6 +30,7 @@ predefinedTasks.get("/", async (c) => {
   try {
     const predefinedTasks = await db.predefinedTask.findMany({
       orderBy: { createdAt: "desc" },
+      include: { schedules: true },
     });
     return c.json({ predefinedTasks });
   } catch (error) {
@@ -39,6 +44,7 @@ predefinedTasks.get("/:id", async (c) => {
     const id = c.req.param("id");
     const predefinedTask = await db.predefinedTask.findUnique({
       where: { id },
+      include: { schedules: true },
     });
 
     if (!predefinedTask) {
@@ -57,15 +63,28 @@ predefinedTasks.post(
   zValidator("json", createPredefinedTaskSchema),
   async (c) => {
     try {
-      const { name, description, recurring, scheduleOn } = c.req.valid("json");
-      const predefinedTask = await db.predefinedTask.create({
-        data: { 
-          name, 
-          description,
-          recurring,
-          scheduleOn: scheduleOn ? new Date(scheduleOn) : null,
-        },
-      });
+      const { name, description, recurring } = c.req.valid("json");
+
+      const data: Prisma.PredefinedTaskCreateInput = {
+        name,
+        description,
+      };
+
+      const schedules = recurring?.map((r) => ({
+        scheduleType: r.type,
+        scheduleOn: r.time,
+      }));
+
+      if (schedules?.length) {
+        data.schedules = {
+          createMany: {
+            data: schedules
+          },
+        };
+      }
+
+      const predefinedTask = await db.predefinedTask.create({data, include: { schedules: true } });
+
       return c.json({ predefinedTask }, 201);
     } catch (error) {
       return c.json({ error: "Failed to create predefined task" }, 500);
@@ -80,16 +99,30 @@ predefinedTasks.put(
   async (c) => {
     try {
       const id = c.req.param("id");
-      const { name, description, recurring, scheduleOn } = c.req.valid("json");
+      const { name, description, recurring } = c.req.valid("json");
+
+      const data: Prisma.PredefinedTaskUpdateInput = {
+        name,
+        description,
+      };
+
+      const schedules = recurring?.map((r) => ({
+        scheduleType: r.type,
+        scheduleOn: r.time,
+      }));
+
+      if (schedules?.length) {
+        data.schedules = {
+          createMany: {
+            data: schedules,
+          },
+        };
+      }
 
       const predefinedTask = await db.predefinedTask.update({
         where: { id },
-        data: { 
-          name, 
-          description,
-          recurring,
-          scheduleOn: scheduleOn ? new Date(scheduleOn) : null,
-        },
+        data,
+        include: { schedules: true },
       });
 
       return c.json({ predefinedTask });

@@ -9,9 +9,6 @@ model User {
     sessions      Session[]
     accounts      Account[]
 
-    // Relations
-    tasks Task[]
-
     @@unique([email])
     @@map("user")
 }

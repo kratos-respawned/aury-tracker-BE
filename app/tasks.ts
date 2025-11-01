@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { db } from "../lib/prisma.js";
+import { ScheduleType, TaskStatus } from "@prisma/client";
 
 const tasks = new Hono();
 
@@ -9,9 +10,8 @@ const tasks = new Hono();
 const createTaskSchema = z.object({
   predefinedTaskId: z.string().min(1, "Predefined task ID is required"),
   scheduledOn: z.string(),
-  duration: z.number().int().positive("Duration must be a positive integer"),
   status: z
-    .enum(["pending", "in_progress", "completed", "cancelled"])
+    .enum(TaskStatus)
     .optional(),
   assignedTo: z.string().min(1, "Assigned user ID is required").optional(),
 });
@@ -22,13 +22,8 @@ const updateTaskSchema = z.object({
     .min(1, "Predefined task ID is required")
     .optional(),
   scheduledOn: z.string().optional(),
-  duration: z
-    .number()
-    .int()
-    .positive("Duration must be a positive integer")
-    .optional(),
   status: z
-    .enum(["pending", "in_progress", "completed", "cancelled"])
+    .enum(TaskStatus)
     .optional(),
   assignedTo: z.string().min(1, "Assigned user ID is required").optional(),
 });
@@ -38,16 +33,9 @@ tasks.get("/", async (c) => {
   try {
     const tasks = await db.task.findMany({
       include: {
-        predefinedTask: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        predefinedTaskSchedule: { include: { predefinedTask: true } },
       },
-      orderBy: { scheduledOn: "asc" },
+      orderBy: { predefinedTaskSchedule: { scheduleOn: "asc" } },
     });
     return c.json({ tasks });
   } catch (error) {
@@ -74,45 +62,46 @@ tasks.get("/date/:date", async (c) => {
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Get all predefined tasks that should run daily
-    const predefinedTasks = await db.predefinedTask.findMany({
+    // Get all predefined tasks schedules that should run daily
+    const predefinedTasksSchedules = await db.predefinedTaskSchedule.findMany({
       where: {
-        recurring: "DAILY",
+        scheduleType: ScheduleType.DAILY,
       },
     });
 
     // For each predefined task, check if it has tasks for today
     const newTasks = [];
-    for (const predefinedTask of predefinedTasks) {
+    for (const predefinedTasksSchedule of predefinedTasksSchedules) {
       // Check if this predefined task already has tasks for today
       const existingTaskForToday = await db.task.findFirst({
         where: {
-          predefinedTaskId: predefinedTask.id,
+          predefinedTaskScheduleId: predefinedTasksSchedule.id,
           scheduledOn: {
-            gte: startOfDay,
-            lte: endOfDay,
+            gte: startOfDay.toISOString(),
+            lte: endOfDay.toISOString(),
           },
         },
       });
 
-      // If no task exists for this predefined task today, create one
+      // If no task exists for this predefined task schedule today, create one
       if (!existingTaskForToday) {
+        // Parse the schedule on and combine with the target date
+        let scheduledDateTime = startOfDay;
+        
+        if (predefinedTasksSchedule.scheduleOn) {
+          const [hours, minutes] = predefinedTasksSchedule.scheduleOn.split(':').map(Number);
+          scheduledDateTime = new Date(targetDate);
+          scheduledDateTime.setHours(hours, minutes, 0, 0);
+        }
+
         const task = await db.task.create({
           data: {
-            predefinedTaskId: predefinedTask.id,
-            scheduledOn: startOfDay,
-            duration: 60, // Default duration of 60 minutes
-            status: "pending",
+            predefinedTaskScheduleId: predefinedTasksSchedule.id,
+            scheduledOn: scheduledDateTime.toISOString(),
+            status: TaskStatus.ONGOING,
           },
           include: {
-            predefinedTask: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
+            predefinedTaskSchedule: { include: { predefinedTask: true } },
           },
         });
         newTasks.push(task);
@@ -123,21 +112,14 @@ tasks.get("/date/:date", async (c) => {
     const allTasksForToday = await db.task.findMany({
       where: {
         scheduledOn: {
-          gte: startOfDay,
-          lte: endOfDay,
+          gte: startOfDay.toISOString(),
+          lte: endOfDay.toISOString(),
         },
       },
       include: {
-        predefinedTask: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        predefinedTaskSchedule: { include: { predefinedTask: true } },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { predefinedTaskSchedule: { scheduleOn: "asc" } },
     });
 
     return c.json({ tasks: allTasksForToday });
@@ -154,14 +136,7 @@ tasks.get("/:id", async (c) => {
     const task = await db.task.findUnique({
       where: { id },
       include: {
-        predefinedTask: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        predefinedTaskSchedule: { include: { predefinedTask: true } },
       },
     });
 
@@ -178,7 +153,7 @@ tasks.get("/:id", async (c) => {
 // POST /tasks - Create a new task
 tasks.post("/", zValidator("json", createTaskSchema), async (c) => {
   try {
-    const { predefinedTaskId, scheduledOn, duration, status, assignedTo } =
+    const { predefinedTaskId, scheduledOn, status, assignedTo } =
       c.req.valid("json");
 
     // Verify that the predefined task exists
@@ -203,11 +178,9 @@ tasks.post("/", zValidator("json", createTaskSchema), async (c) => {
 
     const task = await db.task.create({
       data: {
-        predefinedTaskId,
-        scheduledOn: new Date(scheduledOn),
-        duration,
-        status: status || "pending",
-        assignedTo,
+        predefinedTaskScheduleId: predefinedTask.id,
+        scheduledOn: scheduledOn,
+        status: status || TaskStatus.PENDING,
       },
     });
 
@@ -229,7 +202,6 @@ tasks.put("/:id", zValidator("json", updateTaskSchema), async (c) => {
       data.predefinedTaskId = updateData.predefinedTaskId;
     if (updateData.scheduledOn)
       data.scheduledOn = new Date(updateData.scheduledOn);
-    if (updateData.duration) data.duration = updateData.duration;
     if (updateData.status) data.status = updateData.status;
     if (updateData.assignedTo !== undefined)
       data.assignedTo = updateData.assignedTo;
@@ -260,14 +232,7 @@ tasks.put("/:id", zValidator("json", updateTaskSchema), async (c) => {
       where: { id },
       data,
       include: {
-        predefinedTask: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+        predefinedTaskSchedule: { include: { predefinedTask: true } },
       },
     });
 

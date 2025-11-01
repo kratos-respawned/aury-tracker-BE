@@ -1,16 +1,17 @@
+enum TaskStatus {
+  PENDING
+  ONGOING
+  COMPLETED
+}
+
 model Task {
-  id               String   @id @default(cuid())
-  predefinedTaskId String
-  scheduledOn      DateTime
-  duration         Int // Duration in minutes
-  status           String // e.g., "pending", "in_progress", "completed", "cancelled"
-  assignedTo       String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                        String               @id @default(cuid())
+  predefinedTaskScheduleId  String?
+  scheduledOn               String // Date/time as string (e.g., "2024-01-15", "2024-01-15T09:30:00")
+  status                    TaskStatus
 
   // Relations
-  predefinedTask PredefinedTask @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
-  user           User?          @relation(fields: [assignedTo], references: [id], onDelete: Cascade)
+  predefinedTaskSchedule    PredefinedTaskSchedule? @relation(fields: [predefinedTaskScheduleId], references: [id], onDelete: Cascade)
 
   @@map("Task")
 }

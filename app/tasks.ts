@@ -33,7 +33,8 @@ tasks.get("/", async (c) => {
   try {
     const tasks = await db.task.findMany({
       include: {
-        predefinedTaskSchedule: { include: { predefinedTask: true } },
+        predefinedTaskSchedule: true,
+        predefinedTask: true,
       },
       orderBy: { predefinedTaskSchedule: { scheduleOn: "asc" } },
     });
@@ -97,11 +98,13 @@ tasks.get("/date/:date", async (c) => {
         const task = await db.task.create({
           data: {
             predefinedTaskScheduleId: predefinedTasksSchedule.id,
+            predefinedTaskId: predefinedTasksSchedule.predefinedTaskId,
             scheduledOn: scheduledDateTime.toISOString(),
             status: TaskStatus.ONGOING,
           },
           include: {
-            predefinedTaskSchedule: { include: { predefinedTask: true } },
+            predefinedTaskSchedule: true,
+            predefinedTask: true,
           },
         });
         newTasks.push(task);
@@ -117,7 +120,8 @@ tasks.get("/date/:date", async (c) => {
         },
       },
       include: {
-        predefinedTaskSchedule: { include: { predefinedTask: true } },
+        predefinedTaskSchedule: true,
+        predefinedTask: true,
       },
       orderBy: { predefinedTaskSchedule: { scheduleOn: "asc" } },
     });
@@ -136,7 +140,8 @@ tasks.get("/:id", async (c) => {
     const task = await db.task.findUnique({
       where: { id },
       include: {
-        predefinedTaskSchedule: { include: { predefinedTask: true } },
+        predefinedTaskSchedule: true,
+        predefinedTask: true,
       },
     });
 
@@ -178,7 +183,7 @@ tasks.post("/", zValidator("json", createTaskSchema), async (c) => {
 
     const task = await db.task.create({
       data: {
-        predefinedTaskScheduleId: predefinedTask.id,
+        predefinedTaskId: predefinedTask.id,
         scheduledOn: scheduledOn,
         status: status || TaskStatus.PENDING,
       },
@@ -232,7 +237,8 @@ tasks.put("/:id", zValidator("json", updateTaskSchema), async (c) => {
       where: { id },
       data,
       include: {
-        predefinedTaskSchedule: { include: { predefinedTask: true } },
+        predefinedTaskSchedule: true,
+        predefinedTask: true,
       },
     });
 

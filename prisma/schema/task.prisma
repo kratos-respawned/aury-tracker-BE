@@ -7,11 +7,13 @@ enum TaskStatus {
 model Task {
   id                        String               @id @default(cuid())
   predefinedTaskScheduleId  String?
+  predefinedTaskId          String
   scheduledOn               String // Date/time as string (e.g., "2024-01-15", "2024-01-15T09:30:00")
   status                    TaskStatus
 
   // Relations
   predefinedTaskSchedule    PredefinedTaskSchedule? @relation(fields: [predefinedTaskScheduleId], references: [id], onDelete: Cascade)
+  predefinedTask            PredefinedTask @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
 
   @@map("Task")
 }
